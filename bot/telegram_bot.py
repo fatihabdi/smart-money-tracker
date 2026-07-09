@@ -494,7 +494,7 @@ async def run_full_us_scan() -> list:
     logger.info("Starting full US TA scan...")
 
     # 1. Scan semua saham US
-    us_results = scan_full_us_watchlist()
+    us_results = await scan_full_us_watchlist()
 
     # 2. Generate sinyal
     signals = []
