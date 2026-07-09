@@ -51,21 +51,18 @@ async def main():
         logger.warning("GEMINI_API_KEY is not set. AI analysis will use fallback.")
 
     try:
-        # 5. Start Scheduler
-        scheduler = create_scheduler()
-        start_scheduler()
-
-        # 6. Start Bot (blocking)
+        # 5. Start Bot FIRST (scheduler butuh _app.bot)
         logger.info("Starting Telegram Bot...")
         app = create_bot()
-        
-        # Run bot polling (ini akan memblokir sampai stop)
-        # Gunakan await app.run_polling() untuk versi > 20
         await app.initialize()
         await app.start()
         await app.updater.start_polling(drop_pending_updates=True)
         
-        logger.info("Bot is running. Press Ctrl+C to stop.")
+        # 6. Start Scheduler AFTER bot is ready
+        scheduler = create_scheduler()
+        start_scheduler()
+        
+        logger.info("Bot is running with scheduler. Press Ctrl+C to stop.")
         
         # Keep alive
         stop_event = asyncio.Event()
@@ -79,15 +76,19 @@ async def main():
         # Cleanup
         logger.info("Shutting down...")
         try:
-            if 'app' in locals() and app.updater:
-                await app.updater.stop()
+            from scheduler.jobs import stop_scheduler
+            stop_scheduler()
+        except Exception:
+            pass
+        
+        try:
+            if 'app' in locals():
+                if app.updater:
+                    await app.updater.stop()
                 await app.stop()
                 await app.shutdown()
         except Exception:
             pass
-        
-        from scheduler.jobs import stop_scheduler
-        stop_scheduler()
         
         await close_db()
         logger.info("Shutdown complete.")
